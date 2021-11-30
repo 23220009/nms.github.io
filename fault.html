@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow=sm">
+      <div class="container">
+        <a class="navbar-brand" href="index.html"><h2>Network Management System</h2></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        </div>
+        </nav>
+    <script>
+      window.onload = function () {
+        var chart = new CanvasJS.Chart("chartContainer", {
+          theme: "dark2",
+          exportFileName: "Doughnut Chart",
+          exportEnabled: true,
+          animationEnabled: true,
+          title: {
+            text: "October Faulty Report",
+          },
+          legend: {
+            cursor: "pointer",
+            itemclick: explodePie,
+          },
+          data: [
+            {
+              type: "doughnut",
+              innerRadius: 90,
+              showInLegend: true,
+              toolTipContent: "<b>{name}</b>: ${y} (#percent%)",
+              indexLabel: "{name} - #percent%",
+              dataPoints: [
+                { y: 450, name: "Major" },
+                { y: 120, name: "Minor" },
+                { y: 300, name: "Critical" },
+                { y: 800, name: "Warning" },
+                { y: 150, name: "Indeterminate" },
+              //  { y: 150, name: "Info" },
+               // { y: 250, name: "Others" },
+              ],
+            },
+          ],
+        });
+        chart.render();
+
+        function explodePie(e) {
+          if (typeof e.dataSeries.dataPoints[e.dataPointIndex].exploded === "undefined" || !e.dataSeries.dataPoints[e.dataPointIndex].exploded) {
+            e.dataSeries.dataPoints[e.dataPointIndex].exploded = true;
+          } else {
+            e.dataSeries.dataPoints[e.dataPointIndex].exploded = false;
+          }
+          e.chart.render();
+        }
+      };
+    </script>
+  </head>
+
+  <body>
+    <div id="chartContainer" style="height: 370px; max-width: 920px; margin: 0px auto"></div>
+    <script src="canvasjs-3.4.5/canvasjs.min.js"></script>
+  </body>
+  <!--chart  NMS Faulty <-->
+  <head>
+    <meta charset="UTF-8" />
+    <title>NMS Faulty Report</title>
+
+    <link rel="stylesheet" href="dc.css" />
+  </head>
+  <body>
+    <h1>NMS Faulty Report</h1>
+    <div class="col-md-6">
+    <div id="carType">
+      <strong>Alarm Resume</strong>
+      <span class="reset" style="display: none">Selected: <span class="filter"></span></span>
+      <a class="reset" href="javascript:carTypeChart.filterAll();dc.redrawAll();" style="display: none">reset</a>
+
+      <div class="clearfix"></div>
+    </div>
+
+    <div id="gateName">
+      <strong>Alarm Detail</strong>
+      <span class="reset" style="display: none">Selected: <span class="filter"></span></span>
+      <a class="reset" href="javascript:gateNameChart.filterAll();dc.redrawAll();" style="display: none">reset</a>
+
+      <div class="clearfix"></div>
+    </div>
+
+    <div>
+      <div class="dc-data-count"><span class="filter-count"></span> selected out of <span class="total-count"></span> records | <a href="javascript:dc.filterAll(); dc.renderAll();">Reset All</a></div>
+    </div>
+    <table class="table table-hover dc-data-table"></table>
+
+    <script src="crossfilter.js"></script>
+    <script src="d3.js"></script>
+    <script src="dc.js"></script>
+
+    <script>
+      var carTypeChart = dc.rowChart("#carType"),
+        gateNameChart = dc.rowChart("#gateName"),
+        visCount = dc.dataCount(".dc-data-count"),
+        visTable = dc.dataTable(".dc-data-table");
+
+      // Full dataset could give issues because of gzip
+      // var url = "Lekagul Sensor Data.csv.gz";
+      var url = "Lekagul_slice.csv";
+
+      d3.csv(url, function (err, data) {
+        // Timestamp,car-id,IDU-type,gate-name
+        // 2015-05-01 00:43:28,20154301124328-262,4,entrance3
+        // 2015-05-01 01:03:48,20154301124328-262,4,general-gate1
+        // 2015-05-01 01:06:24,20154301124328-262,4,ranger-stop2
+        // 2015-05-01 01:09:25,20154301124328-262,4,ranger-stop0
+        if (err) throw err;
+
+        data.forEach(function (d) {
+          d.Timestamp = new Date(d.Timestamp);
+        });
+
+        var ndx = crossfilter(data);
+        var all = ndx.groupAll();
+
+        var carTypeDim = ndx.dimension(function (d) {
+          return d["IDU-type"];
+        });
+        var gateNameDim = ndx.dimension(function (d) {
+          return d["gate-name"];
+        });
+        var dateDim = ndx.dimension(function (d) {
+          return d.Timestamp;
+        });
+
+        var carTypeGroup = carTypeDim.group();
+        var gateNameGroup = gateNameDim.group();
+        var dateGroup = dateDim.group();
+
+        carTypeChart.dimension(carTypeDim).group(carTypeGroup).elasticX(true);
+
+        gateNameChart
+          .dimension(gateNameDim)
+          .group(gateNameGroup)
+          .elasticX(true)
+          .data(function (group) {
+            return group.top(10);
+          });
+
+        visCount.dimension(ndx).group(all);
+
+        visTable
+          .dimension(dateDim)
+          // Data table does not use crossfilter group but rather a closure
+          // as a grouping function
+          .group(function (d) {
+            var format = d3.format("02d");
+            return d.Timestamp.getFullYear() + "/" + format(d.Timestamp.getMonth() + 1);
+          })
+          .columns(["Timestamp", "Deskripsi", "IDU-type", "gate-name"]);
+
+        dc.renderAll();
+      });
+    </script>
+     <!-- akhir chart NMS Faulty -->
+  </body>
+</html>
